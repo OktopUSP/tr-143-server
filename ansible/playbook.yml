@@ -1,0 +1,6 @@
+---
+- name: Provision TR-143 speed test server
+  hosts: speedtest
+  become: true
+  roles:
+    - tr143_speedtest

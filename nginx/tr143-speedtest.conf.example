@@ -1,0 +1,53 @@
+# TR-143 speed test endpoint — nginx config
+#
+# Replace `speedtest.example.net` with your own hostname before enabling.
+# See README.md for the full explanation of every setting below.
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name speedtest.example.net;
+
+    server_tokens off;
+
+    # DownloadDiagnostics: CPE issues a plain GET against DownloadURL and
+    # times how long it takes to receive TestFileLength bytes.
+    location /downloads/ {
+        alias /var/www/tr143-speedtest/downloads/;
+
+        limit_except GET { deny all; }
+        limit_req zone=tr143_per_ip burst=5 nodelay;
+        limit_conn tr143_per_ip_conn 4;
+
+        # The test files are large and already incompressible-by-design;
+        # never let gzip touch them or throughput numbers become meaningless.
+        gzip off;
+        sendfile on;
+        tcp_nopush on;
+        aio threads;
+        directio 4m;
+
+        add_header Content-Disposition "attachment";
+        add_header Cache-Control "no-store";
+    }
+
+    # UploadDiagnostics: CPE issues a PUT/POST of TestFileLength bytes
+    # against UploadURL. We just need to accept and discard the body,
+    # then return 200 as fast as possible.
+    location /uploads {
+        limit_except PUT POST { deny all; }
+        limit_req zone=tr143_per_ip burst=5 nodelay;
+        limit_conn tr143_per_ip_conn 4;
+
+        client_max_body_size 1100M;
+        client_body_temp_path /var/lib/tr143-speedtest/uploads;
+        client_body_buffer_size 128k;
+        client_body_in_file_only on;
+
+        return 200;
+    }
+
+    location / {
+        return 404;
+    }
+}

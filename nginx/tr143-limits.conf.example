@@ -1,0 +1,9 @@
+# Rate-limit zones for the TR-143 endpoints. This must live in the nginx
+# `http {}` context — drop it in /etc/nginx/conf.d/ (loaded before
+# sites-enabled on Debian/Ubuntu's default nginx.conf).
+#
+# 1 request/second sustained per IP is plenty: a CPE runs one diagnostic
+# at a time, and this keeps the endpoint from being abused as a free
+# public file host or bandwidth-amplification target.
+limit_req_zone $binary_remote_addr zone=tr143_per_ip:10m rate=1r/s;
+limit_conn_zone $binary_remote_addr zone=tr143_per_ip_conn:10m;

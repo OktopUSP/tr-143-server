@@ -1,0 +1,63 @@
+# Managed by ansible — role tr143_speedtest. Do not edit by hand.
+server {
+    listen 80;
+    listen [::]:80;
+{% if tr143_enable_https %}
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    ssl_certificate "/etc/letsencrypt/live/{{ tr143_server_name }}/fullchain.pem";
+    ssl_certificate_key "/etc/letsencrypt/live/{{ tr143_server_name }}/privkey.pem";
+{% endif %}
+    server_name {{ tr143_server_name }};
+
+    server_tokens off;
+
+{% if tr143_allowed_cidrs %}
+    # Restrict the diagnostic endpoints to your own CPE-facing address space.
+{% endif %}
+    location /downloads/ {
+        alias {{ tr143_downloads_root }}/;
+
+        limit_except GET { deny all; }
+        limit_req zone=tr143_per_ip burst=5 nodelay;
+        limit_conn tr143_per_ip_conn {{ tr143_conn_limit_per_ip }};
+{% for cidr in tr143_allowed_cidrs %}
+        allow {{ cidr }};
+{% endfor %}
+{% if tr143_allowed_cidrs %}
+        deny all;
+{% endif %}
+
+        gzip off;
+        sendfile on;
+        tcp_nopush on;
+        aio threads;
+        directio 4m;
+
+        add_header Content-Disposition "attachment";
+        add_header Cache-Control "no-store";
+    }
+
+    location /uploads {
+        limit_except PUT POST { deny all; }
+        limit_req zone=tr143_per_ip burst=5 nodelay;
+        limit_conn tr143_per_ip_conn {{ tr143_conn_limit_per_ip }};
+{% for cidr in tr143_allowed_cidrs %}
+        allow {{ cidr }};
+{% endfor %}
+{% if tr143_allowed_cidrs %}
+        deny all;
+{% endif %}
+
+        client_max_body_size {{ tr143_max_upload_size }};
+        client_body_temp_path {{ tr143_uploads_temp_path }};
+        client_body_buffer_size 128k;
+        client_body_in_file_only on;
+
+        return 200;
+    }
+
+    location / {
+        return 404;
+    }
+}

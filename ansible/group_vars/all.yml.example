@@ -1,0 +1,11 @@
+---
+tr143_server_name: speedtest.example.net
+tr143_test_file_sizes_mb: [1, 10, 50, 100, 200, 500, 1000]
+tr143_max_upload_size: "1100M"
+tr143_uploads_use_tmpfs: true
+tr143_uploads_tmpfs_size: 2G
+tr143_rate_limit_rps: 1
+tr143_conn_limit_per_ip: 4
+tr143_allowed_cidrs: []
+tr143_enable_https: false
+tr143_certbot_email: "noc@example.net"

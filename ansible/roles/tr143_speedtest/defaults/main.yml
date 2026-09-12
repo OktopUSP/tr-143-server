@@ -1,0 +1,41 @@
+---
+# Hostname the CPEs/ACS will point their DownloadURL/UploadURL at.
+tr143_server_name: speedtest.example.net
+
+# Where the generated test files live and how big they are.
+tr143_downloads_root: /var/www/tr143-speedtest/downloads
+tr143_test_file_sizes_mb:
+  - 1
+  - 10
+  - 50
+  - 100
+  - 200
+  - 500
+  - 1000
+
+# Where uploaded (discarded) bodies are staged while being received.
+tr143_uploads_temp_path: /var/lib/tr143-speedtest/uploads
+tr143_max_upload_size: "1100M"
+
+# Mount the upload temp path as tmpfs so upload diagnostics never touch a
+# real disk. Set tr143_uploads_tmpfs_size to comfortably cover
+# (max concurrent uploads x tr143_max_upload_size).
+tr143_uploads_use_tmpfs: true
+tr143_uploads_tmpfs_size: 2G
+
+# Per-IP request/connection limits (abuse & bandwidth-amplification guard).
+tr143_rate_limit_rps: 1
+tr143_conn_limit_per_ip: 4
+
+# Optional TLS via certbot (Let's Encrypt, HTTP-01). Leave disabled unless
+# your CPE fleet actually needs HTTPS test URLs — see README's "HTTP vs
+# HTTPS" section: TLS adds CPU overhead that can itself become the
+# bottleneck on high-speed links and skew results.
+tr143_enable_https: false
+tr143_certbot_email: ""
+
+# Restrict who can hit /downloads and /uploads to your own CPE-facing
+# address space. Empty list = no extra restriction beyond rate limiting.
+tr143_allowed_cidrs: []
+
+tr143_nginx_worker_connections: 65535

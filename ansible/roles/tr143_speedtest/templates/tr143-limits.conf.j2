@@ -1,0 +1,3 @@
+# Managed by ansible — role tr143_speedtest. Do not edit by hand.
+limit_req_zone $binary_remote_addr zone=tr143_per_ip:10m rate={{ tr143_rate_limit_rps }}r/s;
+limit_conn_zone $binary_remote_addr zone=tr143_per_ip_conn:10m;

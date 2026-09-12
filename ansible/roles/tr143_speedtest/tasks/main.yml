@@ -1,0 +1,134 @@
+---
+- name: Install nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create downloads root
+  ansible.builtin.file:
+    path: "{{ tr143_downloads_root }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Create uploads temp path
+  ansible.builtin.file:
+    path: "{{ tr143_uploads_temp_path }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "1777"
+
+- name: Check whether uploads temp path is already a mountpoint
+  ansible.builtin.command: mountpoint -q {{ tr143_uploads_temp_path }}
+  register: tr143_uploads_mounted
+  failed_when: false
+  changed_when: false
+  when: tr143_uploads_use_tmpfs
+
+- name: Persist uploads tmpfs in fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^tmpfs\s+{{ tr143_uploads_temp_path }}\s'
+    line: "tmpfs {{ tr143_uploads_temp_path }} tmpfs defaults,size={{ tr143_uploads_tmpfs_size }},mode=1777,uid=www-data,gid=www-data 0 0"
+  when: tr143_uploads_use_tmpfs
+
+- name: Mount uploads tmpfs
+  ansible.builtin.command: mount {{ tr143_uploads_temp_path }}
+  when: tr143_uploads_use_tmpfs and tr143_uploads_mounted.rc != 0
+
+- name: Copy test-file generator script
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../scripts/generate-test-files.sh"
+    dest: /usr/local/sbin/tr143-generate-test-files.sh
+    mode: "0755"
+
+- name: Generate TR-143 download test files
+  ansible.builtin.command:
+    cmd: >-
+      /usr/local/sbin/tr143-generate-test-files.sh
+      --root={{ tr143_downloads_root }}
+      --sizes="{{ tr143_test_file_sizes_mb | join(' ') }}"
+  args:
+    creates: "{{ tr143_downloads_root }}/{{ tr143_test_file_sizes_mb[0] }}MB.file"
+
+- name: Install rate-limit zones (nginx http context)
+  ansible.builtin.template:
+    src: tr143-limits.conf.j2
+    dest: /etc/nginx/conf.d/tr143-limits.conf
+    mode: "0644"
+  notify: reload nginx
+
+- name: Install TR-143 speed test site
+  ansible.builtin.template:
+    src: tr143-speedtest.conf.j2
+    dest: /etc/nginx/sites-available/tr143-speedtest.conf
+    mode: "0644"
+  notify: reload nginx
+
+- name: Enable TR-143 speed test site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/tr143-speedtest.conf
+    dest: /etc/nginx/sites-enabled/tr143-speedtest.conf
+    state: link
+  notify: reload nginx
+
+- name: Disable default nginx site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: reload nginx
+
+- name: Apply kernel network tuning
+  ansible.builtin.template:
+    src: 99-tr143-speedtest.conf.j2
+    dest: /etc/sysctl.d/99-tr143-speedtest.conf
+    mode: "0644"
+  notify: reload sysctl
+
+- name: Check whether ufw is installed
+  ansible.builtin.command: which ufw
+  register: tr143_ufw_present
+  failed_when: false
+  changed_when: false
+
+- name: Allow HTTP through ufw
+  community.general.ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+  when: tr143_ufw_present.rc == 0
+
+- name: Allow HTTPS through ufw
+  community.general.ufw:
+    rule: allow
+    port: "443"
+    proto: tcp
+  when: tr143_ufw_present.rc == 0 and tr143_enable_https
+
+- name: Obtain Let's Encrypt certificate (HTTP-01)
+  ansible.builtin.apt:
+    name:
+      - certbot
+      - python3-certbot-nginx
+    state: present
+  when: tr143_enable_https
+
+- name: Run certbot for {{ tr143_server_name }}
+  ansible.builtin.command: >-
+    certbot certonly --nginx --non-interactive --agree-tos
+    -m {{ tr143_certbot_email }}
+    -d {{ tr143_server_name }}
+  args:
+    creates: "/etc/letsencrypt/live/{{ tr143_server_name }}/fullchain.pem"
+  when: tr143_enable_https
+  notify: reload nginx
+
+- name: Ensure nginx is enabled and running
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true
