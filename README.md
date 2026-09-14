@@ -161,7 +161,28 @@ you change a variable (e.g. add a new test file size, or flip on TLS).
 
 ## Install: Option B — manual / step-by-step CLI
 
-Everything the Ansible role does, by hand, on Ubuntu/Debian.
+Everything the Ansible role does, by hand, on Ubuntu/Debian. Run every
+command below **on the speed test server itself** (SSH into it and work
+there) — the commands reference files from this repo by relative path,
+so the repo needs to exist on that machine, not just on your laptop.
+
+**0. Get this repo onto the server**
+
+```bash
+git clone https://github.com/OktopUSP/tr-143-server.git
+cd tr-143-server
+```
+
+No `git` on the box, or you'd rather not pull the whole repo (the
+Ansible role isn't needed for this path)? Grab just the three files
+Option B actually uses:
+
+```bash
+mkdir -p tr-143-server/scripts tr-143-server/nginx && cd tr-143-server
+curl -fsSLo scripts/generate-test-files.sh https://raw.githubusercontent.com/OktopUSP/tr-143-server/main/scripts/generate-test-files.sh
+curl -fsSLo nginx/tr143-speedtest.conf.example https://raw.githubusercontent.com/OktopUSP/tr-143-server/main/nginx/tr143-speedtest.conf.example
+curl -fsSLo nginx/tr143-limits.conf.example https://raw.githubusercontent.com/OktopUSP/tr-143-server/main/nginx/tr143-limits.conf.example
+```
 
 **1. Install nginx**
 
