@@ -166,7 +166,7 @@ command below **on the speed test server itself** (SSH into it and work
 there) — the commands reference files from this repo by relative path,
 so the repo needs to exist on that machine, not just on your laptop.
 
-**0. Get this repo onto the server**
+**1. Get this repo onto the server**
 
 ```bash
 git clone https://github.com/OktopUSP/tr-143-server.git
@@ -185,14 +185,14 @@ curl -fsSLo nginx/tr143-limits.conf.example https://raw.githubusercontent.com/Ok
 curl -fsSLo sysctl/99-tr143-speedtest.conf https://raw.githubusercontent.com/OktopUSP/tr-143-server/main/sysctl/99-tr143-speedtest.conf
 ```
 
-**1. Install nginx**
+**2. Install nginx**
 
 ```bash
 sudo apt update
 sudo apt install -y nginx
 ```
 
-**2. Create the directories**
+**3. Create the directories**
 
 ```bash
 sudo mkdir -p /var/www/tr143-speedtest/downloads
@@ -201,7 +201,7 @@ sudo chown www-data:www-data /var/www/tr143-speedtest/downloads /var/lib/tr143-s
 sudo chmod 1777 /var/lib/tr143-speedtest/uploads
 ```
 
-**3. (Recommended) Mount the upload path as tmpfs**, so upload tests
+**4. (Recommended) Mount the upload path as tmpfs**, so upload tests
 never hit a real disk:
 
 ```bash
@@ -209,7 +209,7 @@ echo 'tmpfs /var/lib/tr143-speedtest/uploads tmpfs defaults,size=2G,mode=1777,ui
 sudo mount /var/lib/tr143-speedtest/uploads
 ```
 
-**4. Generate the download test files**
+**5. Generate the download test files**
 
 ```bash
 sudo cp scripts/generate-test-files.sh /usr/local/sbin/tr143-generate-test-files.sh
@@ -217,7 +217,7 @@ sudo chmod +x /usr/local/sbin/tr143-generate-test-files.sh
 sudo /usr/local/sbin/tr143-generate-test-files.sh --root=/var/www/tr143-speedtest/downloads --sizes="1 10 50 100 200 500 1000"
 ```
 
-**5. Install the rate-limit zones and the vhost**
+**6. Install the rate-limit zones and the vhost**
 
 ```bash
 sudo cp nginx/tr143-limits.conf.example /etc/nginx/conf.d/tr143-limits.conf
@@ -229,7 +229,7 @@ sudo ln -sf /etc/nginx/sites-available/tr143-speedtest.conf /etc/nginx/sites-ena
 sudo rm -f /etc/nginx/sites-enabled/default
 ```
 
-**6. Test and reload**
+**7. Test and reload**
 
 ```bash
 sudo nginx -t
@@ -237,14 +237,14 @@ sudo systemctl reload nginx
 sudo systemctl enable --now nginx
 ```
 
-**7. Open the firewall**
+**8. Open the firewall**
 
 ```bash
 sudo ufw allow 80/tcp
 # sudo ufw allow 443/tcp   # only if you're enabling TLS, see step 8
 ```
 
-**8. (Optional) Enable HTTPS** — only if your CPE fleet actually
+**9. (Optional) Enable HTTPS** — only if your CPE fleet actually
 requires HTTPS test URLs (read the [note above](#how-this-server-implements-it)
 on the throughput cost first):
 
@@ -255,7 +255,7 @@ sudo certbot certonly --nginx --agree-tos -m you@example.net -d speedtest.exampl
 Then uncomment the `listen 443 ssl http2` block and `ssl_certificate*`
 lines in your vhost and reload nginx.
 
-**9. (Recommended for scale) Kernel tuning**
+**10. (Recommended for scale) Kernel tuning**
 
 ```bash
 sudo cp sysctl/99-tr143-speedtest.conf /etc/sysctl.d/99-tr143-speedtest.conf
