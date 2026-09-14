@@ -174,14 +174,15 @@ cd tr-143-server
 ```
 
 No `git` on the box, or you'd rather not pull the whole repo (the
-Ansible role isn't needed for this path)? Grab just the three files
+Ansible role isn't needed for this path)? Grab just the four files
 Option B actually uses:
 
 ```bash
-mkdir -p tr-143-server/scripts tr-143-server/nginx && cd tr-143-server
+mkdir -p tr-143-server/scripts tr-143-server/nginx tr-143-server/sysctl && cd tr-143-server
 curl -fsSLo scripts/generate-test-files.sh https://raw.githubusercontent.com/OktopUSP/tr-143-server/main/scripts/generate-test-files.sh
 curl -fsSLo nginx/tr143-speedtest.conf.example https://raw.githubusercontent.com/OktopUSP/tr-143-server/main/nginx/tr143-speedtest.conf.example
 curl -fsSLo nginx/tr143-limits.conf.example https://raw.githubusercontent.com/OktopUSP/tr-143-server/main/nginx/tr143-limits.conf.example
+curl -fsSLo sysctl/99-tr143-speedtest.conf https://raw.githubusercontent.com/OktopUSP/tr-143-server/main/sysctl/99-tr143-speedtest.conf
 ```
 
 **1. Install nginx**
@@ -221,8 +222,10 @@ sudo /usr/local/sbin/tr143-generate-test-files.sh --root=/var/www/tr143-speedtes
 ```bash
 sudo cp nginx/tr143-limits.conf.example /etc/nginx/conf.d/tr143-limits.conf
 sudo cp nginx/tr143-speedtest.conf.example /etc/nginx/sites-available/tr143-speedtest.conf
-sudo $EDITOR /etc/nginx/sites-available/tr143-speedtest.conf   # set your server_name
-sudo ln -s /etc/nginx/sites-available/tr143-speedtest.conf /etc/nginx/sites-enabled/
+read -rp "Hostname or IP your CPEs will use to reach this server: " TR143_SERVER_NAME
+sudo sed -i "s/speedtest\.example\.net/${TR143_SERVER_NAME}/" /etc/nginx/sites-available/tr143-speedtest.conf
+# or edit it by hand instead: sudo nano /etc/nginx/sites-available/tr143-speedtest.conf
+sudo ln -sf /etc/nginx/sites-available/tr143-speedtest.conf /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 ```
 
@@ -255,7 +258,7 @@ lines in your vhost and reload nginx.
 **9. (Recommended for scale) Kernel tuning**
 
 ```bash
-sudo cp ansible/roles/tr143_speedtest/templates/99-tr143-speedtest.conf.j2 /etc/sysctl.d/99-tr143-speedtest.conf
+sudo cp sysctl/99-tr143-speedtest.conf /etc/sysctl.d/99-tr143-speedtest.conf
 sudo sysctl --system
 ```
 

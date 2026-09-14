@@ -83,8 +83,8 @@
   notify: reload nginx
 
 - name: Apply kernel network tuning
-  ansible.builtin.template:
-    src: 99-tr143-speedtest.conf.j2
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../sysctl/99-tr143-speedtest.conf"
     dest: /etc/sysctl.d/99-tr143-speedtest.conf
     mode: "0644"
   notify: reload sysctl
